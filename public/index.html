@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>All-in-One Video & Audio Downloader</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
+
+  <div class="max-w-lg w-full bg-slate-800 p-6 rounded-2xl shadow-2xl border border-slate-700">
+    <!-- Header -->
+    <div class="text-center mb-6">
+      <h1 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+        Universal Downloader
+      </h1>
+      <p class="text-slate-400 text-xs mt-1">TikTok • YouTube • Instagram • Facebook</p>
+    </div>
+
+    <!-- Form Input -->
+    <div class="space-y-4">
+      <input type="text" id="mediaUrl" placeholder="Tempel URL video di sini..." 
+             class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:border-cyan-400 text-sm text-white">
+
+      <!-- Opsi Format (MP4 / MP3) -->
+      <div class="flex gap-3">
+        <label class="flex-1 cursor-pointer">
+          <input type="radio" name="format" value="video" checked class="peer hidden">
+          <div class="text-center py-2.5 rounded-xl border border-slate-700 bg-slate-900 peer-checked:bg-cyan-500 peer-checked:text-slate-900 font-semibold text-sm transition">
+            📹 Video (MP4)
+          </div>
+        </label>
+
+        <label class="flex-1 cursor-pointer">
+          <input type="radio" name="format" value="audio" class="peer hidden">
+          <div class="text-center py-2.5 rounded-xl border border-slate-700 bg-slate-900 peer-checked:bg-cyan-500 peer-checked:text-slate-900 font-semibold text-sm transition">
+            🎵 Audio Only (MP3)
+          </div>
+        </label>
+      </div>
+
+      <button onclick="processMedia()" id="btnSubmit" 
+              class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold py-3 rounded-xl transition duration-200">
+        Proses & Unduh
+      </button>
+    </div>
+
+    <!-- Status Loading -->
+    <div id="loading" class="hidden text-center mt-6 text-cyan-400 text-sm animate-pulse">
+      Sedang mengambil data dari platform...
+    </div>
+
+    <!-- Hasil Download -->
+    <div id="result" class="hidden mt-6 pt-6 border-t border-slate-700 text-center">
+      <img id="mediaCover" class="w-full h-48 object-cover rounded-xl mb-4" src="" alt="Thumbnail">
+      <h3 id="mediaTitle" class="font-medium text-sm line-clamp-2 mb-1"></h3>
+      <p id="mediaAuthor" class="text-xs text-slate-400 mb-4"></p>
+
+      <a id="downloadBtn" href="#" target="_blank" download
+         class="block w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition duration-200">
+        Download File (<span id="fileFormat"></span>)
+      </a>
+    </div>
+  </div>
+
+  <script>
+    async function processMedia() {
+      const urlInput = document.getElementById('mediaUrl').value.trim();
+      const formatInput = document.querySelector('input[name="format"]:checked').value;
+      
+      const loading = document.getElementById('loading');
+      const result = document.getElementById('result');
+      const btnSubmit = document.getElementById('btnSubmit');
+
+      if (!urlInput) {
+        alert('Masukkan URL terlebih dahulu!');
+        return;
+      }
+
+      loading.classList.remove('hidden');
+      result.classList.add('hidden');
+      btnSubmit.disabled = true;
+
+      try {
+        const res = await fetch('/api/download', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: urlInput, format: formatInput })
+        });
+
+        const data = await res.json();
+
+        if (data.success) {
+          document.getElementById('mediaCover').src = data.cover;
+          document.getElementById('mediaTitle').textContent = data.title;
+          document.getElementById('mediaAuthor').textContent = `${data.platform} • @${data.author}`;
+          document.getElementById('fileFormat').textContent = data.format;
+          
+          const dlBtn = document.getElementById('downloadBtn');
+          dlBtn.href = data.downloadUrl;
+          
+          result.classList.remove('hidden');
+        } else {
+          alert(data.message || 'Gagal memproses URL tersebut.');
+        }
+      } catch (err) {
+        alert('Terjadi kesalahan koneksi atau server.');
+      } finally {
+        loading.classList.hidden = true;
+        loading.classList.add('hidden');
+        btnSubmit.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
