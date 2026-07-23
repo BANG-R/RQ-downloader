@@ -15,7 +15,11 @@ export default async function handler(req, res) {
     if (url.includes('tiktok.com')) {
       const response = await fetch('https://www.tikwm.com/api/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: { 
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'application/json, text/plain, */*'
+        },
         body: new URLSearchParams({ url, hd: '1' })
       });
       const data = await response.json();
