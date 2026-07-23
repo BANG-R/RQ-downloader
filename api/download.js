@@ -13,7 +13,7 @@ export default async function handler(req, res) {
   try {
     // 1. Logika untuk TikTok
     if (url.includes('tiktok.com')) {
-      const response = await fetch('https://api.tikwm.com/api/', {
+      const response = await fetch('https://www.tikwm.com/api/', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ url, hd: '1' })
