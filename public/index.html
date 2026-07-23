@@ -21,6 +21,11 @@
     <div class="space-y-4">
       <input type="text" id="mediaUrl" placeholder="Tempel URL video di sini (Otomatis memproses)..." 
              class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:border-cyan-400 text-sm text-white transition-all text-center">
+             
+      <button onclick="const url = document.getElementById('mediaUrl').value.trim(); if(url) processMedia(url);" id="btnSubmit" 
+              class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold py-3 rounded-xl transition duration-200">
+        Cari Video
+      </button>
     </div>
 
     <!-- Status Loading -->
@@ -69,10 +74,12 @@
       const loading = document.getElementById('loading');
       const result = document.getElementById('result');
       const inputField = document.getElementById('mediaUrl');
+      const btnSubmit = document.getElementById('btnSubmit');
 
       loading.classList.remove('hidden');
       result.classList.add('hidden');
       inputField.disabled = true;
+      if(btnSubmit) btnSubmit.disabled = true;
 
       try {
         const res = await fetch('/api/download', {
@@ -131,6 +138,7 @@
       } finally {
         loading.classList.add('hidden');
         inputField.disabled = false;
+        if(btnSubmit) btnSubmit.disabled = false;
         inputField.focus(); // kembalikan fokus ke input
       }
     }

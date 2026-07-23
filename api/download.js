@@ -31,7 +31,7 @@ export default async function handler(req, res) {
           title: data.data.title,
           cover: data.data.cover,
           author: data.data.author.nickname,
-          videoUrl: data.data.play,
+          videoUrl: data.data.hdplay || data.data.play,
           audioUrl: data.data.music
         });
       } else {
