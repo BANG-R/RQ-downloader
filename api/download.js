@@ -4,7 +4,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, message: 'Method not allowed' });
   }
 
-  const { url, format } = req.body; // format: 'video' atau 'audio'
+  const { url } = req.body;
 
   if (!url) {
     return res.status(400).json({ success: false, message: 'URL tidak boleh kosong!' });
@@ -27,48 +27,62 @@ export default async function handler(req, res) {
           title: data.data.title,
           cover: data.data.cover,
           author: data.data.author.nickname,
-          downloadUrl: format === 'audio' ? data.data.music : data.data.play,
-          format: format === 'audio' ? 'MP3' : 'MP4'
+          videoUrl: data.data.play,
+          audioUrl: data.data.music
         });
+      } else {
+         return res.status(400).json({ success: false, message: 'Gagal mendapatkan data dari TikTok. Pastikan URL valid.' });
       }
     } 
     
-    // 2. Logika Universal (YouTube, Instagram, Facebook via Public API Engine)
-    // Menggunakan Endpoint Public Cobalt/Y2Mate Engine
-    const genericResponse = await fetch('https://co.wuk.sh/api/json', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        url: url,
-        isAudioOnly: format === 'audio',
-        aFormat: 'mp3',
-        vQuality: '720'
-      })
-    });
+    // 2. Logika Universal (YouTube, Instagram, dll)
+    // Coba gunakan Cobalt API terbaru atau fallback
+    const fetchCobalt = async (isAudio) => {
+      try {
+        const res = await fetch('https://api.cobalt.tools/api/json', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            url: url,
+            isAudioOnly: isAudio,
+            aFormat: 'mp3',
+            vQuality: '720'
+          })
+        });
+        const data = await res.json();
+        return data.url || null;
+      } catch (err) {
+        return null;
+      }
+    };
     
-    const genericData = await genericResponse.json();
+    const [videoUrl, audioUrl] = await Promise.all([
+      fetchCobalt(false),
+      fetchCobalt(true)
+    ]);
 
-    if (genericData.url) {
+    if (videoUrl || audioUrl) {
       return res.status(200).json({
         success: true,
         platform: 'Social Media',
         title: 'Media Siap Diunduh',
-        cover: 'https://placehold.co/600x400/0f172a/06b6d4?text=Media+Ready',
+        cover: 'https://placehold.co/600x400/0f172a/06b6d4?text=Preview+Tersedia',
         author: 'User',
-        downloadUrl: genericData.url,
-        format: format === 'audio' ? 'MP3' : 'MP4'
+        videoUrl: videoUrl,
+        audioUrl: audioUrl
       });
     }
 
     return res.status(400).json({ 
       success: false, 
-      message: 'Gagal memproses URL. Pastikan link publik dan valid!' 
+      message: 'Gagal memproses URL. API tidak merespons atau link tidak valid.' 
     });
 
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Terjadi kesalahan pada server Proxy.' });
+    console.error(error);
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan pada server: ' + error.message });
   }
 }
