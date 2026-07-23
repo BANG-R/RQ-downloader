@@ -19,24 +19,19 @@
 
     <!-- Form Input -->
     <div class="space-y-4">
-      <input type="text" id="mediaUrl" placeholder="Tempel URL video di sini..." 
-             class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:border-cyan-400 text-sm text-white">
-
-      <button onclick="processMedia()" id="btnSubmit" 
-              class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold py-3 rounded-xl transition duration-200">
-        Cari Video
-      </button>
+      <input type="text" id="mediaUrl" placeholder="Tempel URL video di sini (Otomatis memproses)..." 
+             class="w-full px-4 py-3 bg-slate-900 border border-slate-700 rounded-xl focus:outline-none focus:border-cyan-400 text-sm text-white transition-all text-center">
     </div>
 
     <!-- Status Loading -->
-    <div id="loading" class="hidden text-center mt-6 text-cyan-400 text-sm animate-pulse">
+    <div id="loading" class="hidden text-center mt-6 text-cyan-400 text-sm animate-pulse font-medium">
       Sedang mengambil data dari platform...
     </div>
 
     <!-- Hasil Download -->
     <div id="result" class="hidden mt-6 pt-6 border-t border-slate-700 text-center">
       <!-- Preview Section -->
-      <div class="relative w-full h-48 bg-slate-900 rounded-xl mb-4 overflow-hidden border border-slate-700 flex items-center justify-center">
+      <div class="relative w-full h-48 bg-slate-900 rounded-xl mb-4 overflow-hidden border border-slate-700 flex items-center justify-center shadow-inner">
         <video id="mediaVideo" class="hidden w-full h-full object-contain" controls></video>
         <img id="mediaCover" class="w-full h-full object-cover" src="" alt="Thumbnail">
       </div>
@@ -45,34 +40,39 @@
       <p id="mediaAuthor" class="text-xs text-slate-400 mb-4"></p>
 
       <div class="grid grid-cols-2 gap-3">
-        <a id="btnVideo" href="#" target="_blank" download
-           class="block w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition duration-200 text-sm">
+        <button id="btnVideo" onclick="downloadFile(this.dataset.url, 'video.mp4', this, 'Unduh Video (MP4)')"
+           class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition duration-200 text-sm shadow-lg shadow-emerald-500/30 active:scale-95">
           Unduh Video (MP4)
-        </a>
-        <a id="btnAudio" href="#" target="_blank" download
-           class="block w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 rounded-xl transition duration-200 text-sm">
+        </button>
+        <button id="btnAudio" onclick="downloadFile(this.dataset.url, 'audio.mp3', this, 'Unduh Audio (MP3)')"
+           class="w-full bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 rounded-xl transition duration-200 text-sm shadow-lg shadow-cyan-500/30 active:scale-95">
           Unduh Audio (MP3)
-        </a>
+        </button>
       </div>
     </div>
   </div>
 
   <script>
-    async function processMedia() {
-      const urlInput = document.getElementById('mediaUrl').value.trim();
+    let lastProcessedUrl = '';
+
+    // Auto-fetch saat user paste link
+    document.getElementById('mediaUrl').addEventListener('input', function(e) {
+      const url = e.target.value.trim();
+      if (url.startsWith('http') && url !== lastProcessedUrl) {
+        processMedia(url);
+      }
+    });
+
+    async function processMedia(urlInput) {
+      lastProcessedUrl = urlInput;
       
       const loading = document.getElementById('loading');
       const result = document.getElementById('result');
-      const btnSubmit = document.getElementById('btnSubmit');
-
-      if (!urlInput) {
-        alert('Masukkan URL terlebih dahulu!');
-        return;
-      }
+      const inputField = document.getElementById('mediaUrl');
 
       loading.classList.remove('hidden');
       result.classList.add('hidden');
-      btnSubmit.disabled = true;
+      inputField.disabled = true;
 
       try {
         const res = await fetch('/api/download', {
@@ -88,7 +88,7 @@
           document.getElementById('mediaTitle').textContent = data.title;
           document.getElementById('mediaAuthor').textContent = `${data.platform} • @${data.author}`;
           
-          // Atur Preview (Video atau Cover)
+          // Atur Preview
           const videoPlayer = document.getElementById('mediaVideo');
           const coverImg = document.getElementById('mediaCover');
           
@@ -102,19 +102,19 @@
             videoPlayer.classList.add('hidden');
           }
           
-          // Atur Tombol Download
+          // Atur URL di Button Dataset
           const btnVideo = document.getElementById('btnVideo');
           const btnAudio = document.getElementById('btnAudio');
           
           if (data.videoUrl) {
-            btnVideo.href = data.videoUrl;
+            btnVideo.dataset.url = data.videoUrl;
             btnVideo.style.display = 'block';
           } else {
             btnVideo.style.display = 'none';
           }
 
           if (data.audioUrl) {
-            btnAudio.href = data.audioUrl;
+            btnAudio.dataset.url = data.audioUrl;
             btnAudio.style.display = 'block';
           } else {
             btnAudio.style.display = 'none';
@@ -123,12 +123,51 @@
           result.classList.remove('hidden');
         } else {
           alert(data.message || 'Gagal memproses URL tersebut.');
+          lastProcessedUrl = ''; // reset agar bisa dicoba lagi
         }
       } catch (err) {
         alert('Terjadi kesalahan koneksi atau server.');
+        lastProcessedUrl = '';
       } finally {
         loading.classList.add('hidden');
-        btnSubmit.disabled = false;
+        inputField.disabled = false;
+        inputField.focus(); // kembalikan fokus ke input
+      }
+    }
+
+    // Fungsi untuk download langsung tanpa buka tab baru
+    async function downloadFile(url, filename, btn, originalText) {
+      if (!url) return;
+      
+      // Ubah teks tombol jadi loading
+      btn.disabled = true;
+      btn.textContent = 'Mengunduh... ⏳';
+      btn.classList.add('opacity-75');
+
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Gagal mengambil file');
+        
+        const blob = await response.blob();
+        const objectUrl = window.URL.createObjectURL(blob);
+        
+        // Buat elemen link sementara untuk memicu download
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = `Media_${Date.now()}_${filename}`;
+        document.body.appendChild(a);
+        a.click();
+        
+        // Bersihkan
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(objectUrl);
+      } catch (error) {
+        alert('Terjadi kesalahan saat mengunduh file. Kemungkinan diblokir sistem.');
+      } finally {
+        // Kembalikan tombol seperti semula
+        btn.disabled = false;
+        btn.textContent = originalText;
+        btn.classList.remove('opacity-75');
       }
     }
   </script>
